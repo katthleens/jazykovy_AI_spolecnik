@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI jazykový lektor</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --bg-gradient: linear-gradient(180deg, #f8fbff 0%, #f5ffe4 40%, #fbfbfb 100%);
+            --accent: #c7ff3f;          /* неоново-лаймовый */
+            --accent-soft: #e6ffc4;
+            --accent-dark: #9ad52d;
+            --text-main: #111111;
+            --text-muted: #6b7280;
+            --card-silver: linear-gradient(135deg,#f4f4f6 0%,#e2e4ea 40%,#fdfdfd 100%);
+            --card-dark: #111827;
+            --border-soft: #e5e7eb;
+            --shadow-soft: 0 18px 45px rgba(0,0,0,0.12);
+            --radius-lg: 26px;
+            --radius-md: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1100px;
+            padding: 40px 24px 60px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: #111827;
+            color: #f9fafb;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 16px;
+        }
+
+        .badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: var(--accent);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+            gap: 40px;
+            align-items: center;
+            margin-bottom: 42px;
+        }
+
+        @media (max-width: 860px) {
+            .hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hero-title {
+            font-size: 32px;
+            line-height: 1.1;
+            font-weight: 700;
+            margin: 0 0 12px;
+        }
+
+        .hero-accent {
+            background: linear-gradient(120deg, #111827 0%, #4b5563 40%, #9ca3af 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            max-width: 480px;
+            margin-bottom: 24px;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            max-width: 420px;
+        }
+
+        .stat-card {
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: var(--card-silver);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #6b7280;
+        }
+
+         .hero-blob {
+            position: relative;
+            height: 260px;
+            border-radius: 999px;
+            background: none;    /* ← пустой фон */
+            border: none;        /* ← без рамки */
+            box-shadow: none;    /* ← без тени */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+
+        .hero-blob-inner {
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 0%, #ffffff 0%, #d4d4d8 40%, #9ca3af 70%, #111827 100%);
+            filter: blur(1px);
+        }
+
+    
+
+        /* Блок с “формой” репетитора */
+
+        .panel {
+            background: #ffffff;
+            border-radius: var(--radius-lg);
+            padding: 20px 22px 22px;
+            border: 1px solid var(--border-soft);
+            box-shadow: var(--shadow-soft);
+            margin-bottom: 32px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--text-muted);
+        }
+
+        .level-pill {
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #111827;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .select,
+        textarea,
+        button {
+            width: 100%;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            padding: 9px 12px;
+            font-size: 14px;
+            background: #f9fafb;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        }
+
+        .select:focus,
+        textarea:focus {
+            border-color: var(--accent-dark);
+            box-shadow: 0 0 0 1px rgba(202, 255, 122, 0.8);
+            background: #ffffff;
+        }
+
+        .select {
+            border-radius: 999px;
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+            border-radius: 16px;
+        }
+
+        button {
+            margin-top: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(90deg, var(--accent-dark), var(--accent));
+            color: #111827;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            height: 42px;
+        }
+
+        /* Правки для тёмной темы: текст в форме — чёрный на белом */
+        body.theme-dark .panel {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        body.theme-dark label {
+            color: #000000;
+        }
+
+        body.theme-dark .select,
+        body.theme-dark textarea {
+            background: #ffffff;
+            color: #000000;
+            border-color: #d1d5db;
+        }
+
+        body.theme-dark #answer {
+    /* оставим «ответ» тёмным, чтобы выглядело как чат-булочка */
+            background: var(--card-dark);
+            color: #e5e7eb;
+        }
+
+        .theme-toggle-btn {
+            width: auto;
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            cursor: pointer;
+            color: #111827;
+        }
+
+        .theme-toggle-btn:hover {
+            background: #111827;
+            color: #f9fafb;
+        }
+        button:hover {
+            filter: brightness(1.03);
+            box-shadow: 0 10px 26px rgba(190, 242, 100, 0.55);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        #answer {
+            margin-top: 16px;
+            border-radius: 20px;
+            background: var(--card-dark);
+            color: #e5e7eb;
+            padding: 14px 16px;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            border: 1px solid #111827;
+        }
+
+        #answer.error {
+            background: #431325;
+            border-color: #fecaca;
+            color: #fecaca;
+        }
+
+        .footer-note {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+        /* Chat historie */
+        #chat {
+            margin-top: 16px;
+            max-height: 380px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg {
+            padding: 10px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: #e5ffe0;
+            border: 1px solid #bbf7d0;
+        }
+
+        .msg-ai {
+            align-self: flex-start;
+            background: #111827;
+            color: #e5e7eb;
+            border: 1px solid #020617;
+        }
+
+        .msg-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* ТЁМНАЯ ТЕМА — ОСНОВНЫЕ ЦВЕТА */
+body.theme-dark {
+    --bg-gradient: radial-gradient(circle at top, #020617 0%, #020617 40%, #020617 100%);
+    --bg: #020617;
+
+    --text-main: #f9fafb;      /* обычный текст */
+    --text-muted: #9ca3af;     /* подписи, серый текст */
+
+    --card-silver: #fafafa;    /* светлые карточки в тёмной теме */
+    --card-dark: #020617;
+
+    --border-soft: #1f2937;
+    --shadow-soft: 0 24px 60px rgba(0,0,0,0.7);
+
+    --accent: #a3e635;         /* неон */
+    --accent-soft: rgba(163, 230, 53, 0.10);
+    --accent-dark: #65a30d;
+}
+        
+        body.theme-dark .hero-title,
+        body.theme-dark .hero-subtitle,
+        body.theme-dark .badge,
+        body.theme-dark .badge-dot,
+        body.theme-dark .hero-accent {
+            color: #ffffff !important;
+        }
+
+        body.theme-dark .stat-value,
+        body.theme-dark .stat-label {
+            color: #000000;
+        }
+
+        /* Заголовок ONLINE PRAXE */
+        body.theme-dark .panel-title {
+            color: #fffafa;
+        }
+
+/* Плашка ÚROVEŇ */
+        body.theme-dark .level-pill {
+            background: #7bb526;
+            color: #f9fafb;
+        }
+
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+    <div class="badge">
+        <span class="badge-dot"></span>
+        Váš studijní AI pomocník
+    </div>
+
+    <button id="themeToggle" class="theme-toggle-btn">
+        Tmavý režim
+    </button>
+</div>
+    
+
+    <section class="hero">
+        <div>
+            <h1 class="hero-title">
+                AI&nbsp;lektor <span class="hero-accent">cizích jazyků</span>
+            </h1>
+            <p class="hero-subtitle">
+                Trénuj cizí jazyk v bezpečném prostředí a hned dostávej vysvětlení chyb česky.
+                Vhodné pro studenty v Česku na úrovni A2–B2, na domácí samostudium i školní projekty.
+            </p>
+
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <div class="stat-value">2&nbsp;režimy</div>
+                    <div class="stat-label">Konverzace a vysvětlení gramatiky</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">24/7</div>
+                    <div class="stat-label">Dostupné z jakéhokoli zařízení</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">CZ + 10 jazyků</div>
+                    <div class="stat-label">Odpověď + rozbor chyb v češtině</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">AI</div>
+                    <div class="stat-label">Model OpenAI gpt-4o-mini</div>
+                </div>
+            </div>
+        </div>
+
+       <div class="hero-blob">
+    <img src="{{ url_for('static', filename='IMG_4359.PNG') }}"
+         alt="AI lektor jazyků"
+         style="width: 100%; height: auto; border-radius: 999px; object-fit: cover; position: relative; z-index: 1;">
+</div>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div class="panel-title">online praxe</div>
+            <div class="level-pill">úroveň A2–B2</div>
+        </div>
+        
+        <label for="language">Jazyk:</label>
+        <select id="language" class="select">
+            <option value="en">Angličtina</option>
+            <option value="de">Němčina</option>
+            <option value="fr">Francouzština</option>
+            <option value="es">Španělština</option>
+            <option value="it">Italština</option>
+            <option value="pt">Portugalština</option>
+            <option value="pl">Polština</option>
+            <option value="tr">Turečtina</option>
+            <option value="zh">Čínština</option>
+            <option value="ja">Japonština</option>
+            <option value="ko">Korejština</option>
+        </select>
+
+        <label for="mode">Režim:</label>
+        <select id="mode" class="select">
+            <option value="dialog">Konverzační praxe</option>
+            <option value="explain">Vysvětlení slov / gramatiky</option>
+        </select>
+
+        <label for="message">Tvůj text / dotaz:</label>
+        <textarea id="message"
+                  placeholder="Napiš větu nebo krátký text v cílovém jazyce, nebo popiš, co chceš vysvětlit."></textarea>
+
+        <button id="sendBtn">Odeslat</button>
+
+        <div id="chat"></div>
+
+        <p class="footer-note">
+            Pro fungování se používá API OpenAI. Odpovědi slouží pouze ke studijním účelům.
+        </p>
+    </section>
+</div>
+
+<script>
+    const btn = document.getElementById('sendBtn');
+    const msgInput = document.getElementById('message');
+    const modeSelect = document.getElementById('mode');
+    const chatDiv = document.getElementById('chat');
+    const languageSelect = document.getElementById('language');
+    const themeToggle = document.getElementById('themeToggle');
+
+    let history = [];
+
+    function renderChat() {
+        chatDiv.innerHTML = "";
+        history.forEach(msg => {
+            const div = document.createElement('div');
+            div.classList.add('msg');
+            if (msg.role === 'user') {
+                div.classList.add('msg-user');
+            } else if (msg.role === 'assistant') {
+                div.classList.add('msg-ai');
+            } else {
+                div.classList.add('msg-error');
+            }
+            div.textContent = msg.content;
+            chatDiv.appendChild(div);
+        });
+
+        // Скролл вниз
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    themeToggle.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('theme-dark');
+    themeToggle.textContent = isDark ? 'Světlý režim' : 'Tmavý režim';
+    });
+    btn.addEventListener('click', async () => {
+        const message = msgInput.value.trim();
+        const mode = modeSelect.value;
+        const language = languageSelect.value;
+
+        if (!message) {
+            // системное сообщение об ошибке
+            history.push({role: "system", content: "Nejdřív napiš text."});
+            renderChat();
+            return;
+        }
+
+        // Добавляем сообщение пользователя в историю
+        history.push({role: "user", content: message});
+        renderChat();
+        msgInput.value = "";
+
+        // Временное сообщение «AI přemýšlí...»
+        history.push({
+            role: "assistant",
+            content: "AI přemýšlí..."
+        });
+        renderChat();
+
+        try {
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message,mode,language,history: history.filter(m => m.role === "user" || m.role === "assistant")})
+            });
+
+            const data = await response.json();
+
+            // Убираем последний «AI přemýšlí...»
+            history.pop();
+
+            if (!response.ok) {
+                history.push({role: "system", content: "Chyba: " + (data.error || "Neznámá chyba")});
+            } 
+            else {
+                history.push({
+                    role: "assistant",
+                    content: data.answer
+                });
+            }
+
+            renderChat();
+        } catch (err) {
+            const last = history[history.length - 1];
+            if (last && last.content === "AI přemýšlí...") {
+                history.pop();
+            }
+            history.push({
+                role: "system",
+                content: "Chyba sítě: " + err
+            });
+            renderChat();
+        }
+    });
+</script>
+</body>
+</html>
